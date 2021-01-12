@@ -9,7 +9,6 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.Iterator;
 import lombok.Getter;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -34,16 +33,16 @@ public class VaccineCheckerThread extends Thread {
 			try {
 				boolean updateSuccess = false;
 				try {
-					updateSuccess = tryUpdateVaccinationNumbers(LocalDate.now());
+					updateSuccess = tryUpdateNumbers(LocalDate.now());
 				} catch (FileNotFoundException ignored) {
 
 				} finally {
 					if (!updateSuccess) {
-						System.out.println("Error getting new data... trying to find yesterdays!");
+						System.err.println("Error getting new data... trying to find yesterdays!");
 						try {
-							tryUpdateVaccinationNumbers(LocalDate.now().minus(1, ChronoUnit.DAYS));
+							tryUpdateNumbers(LocalDate.now().minus(1, ChronoUnit.DAYS));
 						} catch (FileNotFoundException fileNotFoundException) {
-							System.out.println("Failed to find any data from yesterday either!");
+							System.err.println("Failed to find any data from yesterday either!");
 						}
 					}
 				}
@@ -59,9 +58,7 @@ public class VaccineCheckerThread extends Thread {
 		}
 	}
 
-	private boolean tryUpdateVaccinationNumbers(LocalDate date) throws FileNotFoundException {
-		System.out.println("Trying to update numbers...");
-
+	private boolean tryUpdateNumbers(LocalDate date) throws FileNotFoundException {
 		try {
 			Sheet sheet = getVaccineSheet(date);
 			Cell cell;
