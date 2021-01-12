@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>COVID-19 UK Vaccination Tracker</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&display=swap"
+            rel="stylesheet">
+        <link rel="stylesheet" href="css/style.css">
+        <link rel="icon" href="/img/favicon.png" type="image/png" />
+    </head>
+    <body>
+        <main>
+            <h1>COVID-19 Vaccinations Administered in the UK</h1>
+            <span id="vaccine-count">$vaccinationsFormatted</span><br />
+            <span id="vaccine-diff">($vaccinationsDiffFormatted)</span>
+        </main>
+        <footer>
+          Figures as released by the UK government on $dataFromDateFormatted (figures released daily). Difference amount shown is the amount changed in total vaccinations between $dataFromDateMinus1Formatted and $dataFromDateFormatted. Note: this data includes total vaccinations, not people vaccinated. $firstDoseFormatted people have been given their first dose, and $secondDoseFormatted their second dose.<p />
+          <strong>last updated $lastCheckFormatted</strong>
+        </footer>
+        <script src="js/script.js"></script>
+    </body>
+</html>
