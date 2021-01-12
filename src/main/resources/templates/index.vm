@@ -9,6 +9,15 @@
             rel="stylesheet">
         <link rel="stylesheet" href="css/style.css">
         <link rel="icon" href="/img/favicon.png" type="image/png" />
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-SZPMDLCQ36"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-SZPMDLCQ36');
+        </script>
     </head>
     <body>
         <main>
@@ -17,7 +26,7 @@
             <span id="vaccine-diff">($vaccinationsDiffFormatted)</span>
         </main>
         <footer>
-          Figures as released by the UK government on $dataFromDateFormatted (figures released daily). Difference amount shown is the amount changed in total vaccinations between $dataFromDateMinus1Formatted and $dataFromDateFormatted. Note: this data includes total vaccinations, not people vaccinated. $firstDoseFormatted people have been given their first dose, and $secondDoseFormatted their second dose.<p />
+          Figures as released by the UK government up to the $dataFromDateFormatted (figures released daily). Difference amounts shown are the amount changed in vaccinations between data released on the $dataFromDateMinus1Formatted and on the $dataFromDateFormatted. Note: this data includes total vaccinations, not people vaccinated. $firstDoseFormatted ($firstDoseDiffFormatted) people have been given their first dose, and $secondDoseFormatted ($secondDoseDiffFormatted) their second dose.<p />
           <strong>last updated $lastCheckFormatted</strong>
         </footer>
         <script src="js/script.js"></script>

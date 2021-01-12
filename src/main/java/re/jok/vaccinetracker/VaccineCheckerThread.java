@@ -1,51 +1,46 @@
 package re.jok.vaccinetracker;
 
-import java.io.BufferedInputStream;
-import java.io.FileNotFoundException;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
+import java.util.zip.GZIPInputStream;
 import lombok.Getter;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @Getter
 public class VaccineCheckerThread extends Thread {
-
-	private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMMM-yyyy");
 
 	private volatile double vaccinations = -1;
 	private volatile double vaccinationsDiff = -1;
 	private volatile double firstDose = -1;
 	private volatile double secondDose = -1;
-	private volatile LocalDate dataFromDate = null;
+	private volatile double firstDoseDiff = -1;
+	private volatile double secondDoseDiff = -1;
+	private volatile LocalDate dataUptoDate = null;
 	private volatile ZonedDateTime lastCheck = null;
+
+	private static final Gson gson = new Gson();
+	private static URL dataUrl;
 
 	@Override
 	public void run() {
+		try {
+			dataUrl = new URL("https://coronavirus.data.gov.uk/api/v1/data?filters=areaType=overview&structure=%7B%22date%22:%22date%22,%22cumPeopleVaccinatedFirstDoseByPublishDate%22:%22cumPeopleVaccinatedFirstDoseByPublishDate%22,%22cumPeopleVaccinatedSecondDoseByPublishDate%22:%22cumPeopleVaccinatedSecondDoseByPublishDate%22%7D&format=json");
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
+
 		while (true) {
 			try {
-				boolean updateSuccess = false;
-				try {
-					updateSuccess = tryUpdateNumbers(LocalDate.now());
-				} catch (FileNotFoundException ignored) {
-
-				} finally {
-					if (!updateSuccess) {
-						System.err.println("Error getting new data... trying to find yesterdays!");
-						try {
-							tryUpdateNumbers(LocalDate.now().minus(1, ChronoUnit.DAYS));
-						} catch (FileNotFoundException fileNotFoundException) {
-							System.err.println("Failed to find any data from yesterday either!");
-						}
-					}
-				}
+				updateData();
 
 				try {
 					Thread.sleep(60000);
@@ -58,47 +53,27 @@ public class VaccineCheckerThread extends Thread {
 		}
 	}
 
-	private boolean tryUpdateNumbers(LocalDate date) throws FileNotFoundException {
-		try {
-			Sheet sheet = getVaccineSheet(date);
-			Cell cell;
+	private void updateData() {
+		try (InputStreamReader reader = new InputStreamReader(new GZIPInputStream(dataUrl.openConnection().getInputStream()))) {
+			JsonObject json = gson.fromJson(reader, JsonObject.class);
 
-			// vaccinations
-			cell = sheet.getRow(13).getCell(3);
-			vaccinations = cell.getNumericCellValue();
+			JsonArray data = json.get("data").getAsJsonArray();
+			JsonObject mostRecentData = data.get(0).getAsJsonObject();
+			JsonObject dayBeforeData = data.get(1).getAsJsonObject();
+			firstDose = mostRecentData.get("cumPeopleVaccinatedFirstDoseByPublishDate").getAsInt();
+			secondDose = mostRecentData.get("cumPeopleVaccinatedSecondDoseByPublishDate").getAsInt();
+			vaccinations = firstDose + secondDose;
 
-			// yesterday vaccinations
-			Sheet sheetYesterday = getVaccineSheet(date.minus(1, ChronoUnit.DAYS));
+			int dayBeforeFirstDose = dayBeforeData.get("cumPeopleVaccinatedFirstDoseByPublishDate").getAsInt();
+			int dayBeforeSecondDose = dayBeforeData.get("cumPeopleVaccinatedSecondDoseByPublishDate").getAsInt();
+			vaccinationsDiff = vaccinations - (dayBeforeFirstDose + dayBeforeSecondDose);
+			firstDoseDiff = firstDose - dayBeforeFirstDose;
+			secondDoseDiff = secondDose - dayBeforeSecondDose;
 
-			cell = sheetYesterday.getRow(13).getCell(3);
-			vaccinationsDiff = vaccinations - cell.getNumericCellValue();
-
-			// first dose
-			cell = sheet.getRow(14).getCell(3);
-			firstDose = cell.getNumericCellValue();
-
-			// second dose
-			cell = sheet.getRow(15).getCell(3);
-			secondDose = cell.getNumericCellValue();
-		} catch (FileNotFoundException e) {
-			throw e;
+			lastCheck = ZonedDateTime.now();
+			dataUptoDate = LocalDate.parse(mostRecentData.get("date").getAsString());
 		} catch (IOException e) {
 			e.printStackTrace();
-			return false;
-		}
-
-		lastCheck = ZonedDateTime.now();
-		dataFromDate = date;
-
-		return true;
-	}
-
-	private Sheet getVaccineSheet(LocalDate date) throws IOException {
-		String dateString = formatter.format(date);
-		String url = "https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/01/COVID-19-daily-announced-vaccinations-" + dateString + ".xlsx";
-		try (InputStream is = new BufferedInputStream(new URL(url).openStream())) {
-			Workbook wb = new XSSFWorkbook(is);
-			return wb.getSheet("Total Vaccinations");
 		}
 	}
 

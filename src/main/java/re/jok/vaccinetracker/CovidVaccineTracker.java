@@ -7,9 +7,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import org.ocpsoft.prettytime.PrettyTime;
+import org.ocpsoft.prettytime.units.JustNow;
+import org.ocpsoft.prettytime.units.Millisecond;
 import spark.ModelAndView;
 import spark.Service;
-import spark.Spark;
 import spark.template.velocity.VelocityTemplateEngine;
 
 public class CovidVaccineTracker {
@@ -19,6 +20,10 @@ public class CovidVaccineTracker {
 	private static final PrettyTime prettyTime = new PrettyTime();
 
 	public static void main(String[] args) {
+		// we don't want to format durations with "moments ago" or millis
+		prettyTime.removeUnit(JustNow.class);
+		prettyTime.removeUnit(Millisecond.class);
+
 		VaccineCheckerThread checkerThread = new VaccineCheckerThread();
 		checkerThread.start();
 
@@ -26,6 +31,14 @@ public class CovidVaccineTracker {
 		Service service = Service.ignite()
 				.port(80)
 				.staticFileLocation("/static");
+
+//		service.before(((request, response) -> {
+//			final String url = request.url();
+//			if (url.startsWith("http://")) {
+//				final String[] split = url.split("http://");
+//				response.redirect("https://" + split[1]);
+//			}
+//		}));
 
 		service.get("/", (req, res) -> {
 			Map<String, Object> map = new HashMap<>();
@@ -38,10 +51,14 @@ public class CovidVaccineTracker {
 					vaccineNumberFormat.format(checkerThread.getFirstDose()) : "Unknown");
 			map.put("secondDoseFormatted", checkerThread.getSecondDose() != -1 ?
 					vaccineNumberFormat.format(checkerThread.getSecondDose()) : "Unknown");
-			map.put("dataFromDateFormatted", checkerThread.getDataFromDate() != null ?
-					releaseDateFormat.format(checkerThread.getDataFromDate()) : "Never");
-			map.put("dataFromDateMinus1Formatted", checkerThread.getDataFromDate() != null ?
-					releaseDateFormat.format(checkerThread.getDataFromDate().minus(1, ChronoUnit.DAYS)) : "Never");
+			map.put("firstDoseDiffFormatted", checkerThread.getSecondDoseDiff() != -1 ?
+					(checkerThread.getFirstDoseDiff() >= 0 ? "+" : "") + vaccineNumberFormat.format(checkerThread.getFirstDoseDiff()) : "Unknown");
+			map.put("secondDoseDiffFormatted", checkerThread.getSecondDoseDiff() != -1 ?
+					(checkerThread.getSecondDoseDiff() >= 0 ? "+" : "") + vaccineNumberFormat.format(checkerThread.getSecondDoseDiff()) : "Unknown");
+			map.put("dataFromDateFormatted", checkerThread.getDataUptoDate() != null ?
+					releaseDateFormat.format(checkerThread.getDataUptoDate()) : "Never");
+			map.put("dataFromDateMinus1Formatted", checkerThread.getDataUptoDate() != null ?
+					releaseDateFormat.format(checkerThread.getDataUptoDate().minus(1, ChronoUnit.DAYS)) : "Never");
 			map.put("lastCheckFormatted", checkerThread.getLastCheck() != null ?
 					prettyTime.format(Date.from(checkerThread.getLastCheck().toInstant())) : "Never");
 
